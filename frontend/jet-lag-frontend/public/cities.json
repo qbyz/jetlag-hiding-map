@@ -1,0 +1,38 @@
+[
+  {
+    "id": "toronto",
+    "name": "Toronto",
+    "region": "Ontario, Canada",
+    "operators": "TTC + GO",
+    "timeZone": "America/Toronto",
+    "graphPath": "/cities/toronto.msgpack",
+    "lines": 12
+  },
+  {
+    "id": "nyc",
+    "name": "New York City",
+    "region": "New York, NY",
+    "operators": "MTA Subway",
+    "timeZone": "America/New_York",
+    "graphPath": "/cities/nyc.msgpack",
+    "lines": 28
+  },
+  {
+    "id": "salt-spring-island",
+    "name": "Salt Spring Island",
+    "region": "British Columbia, Canada",
+    "operators": "BC Transit",
+    "timeZone": "America/Vancouver",
+    "graphPath": "/cities/salt-spring-island.msgpack",
+    "lines": 8
+  },
+  {
+    "id": "chicago",
+    "name": "Chicago",
+    "region": "Illinois, United States",
+    "operators": "CTA",
+    "timeZone": "America/Chicago",
+    "graphPath": "/cities/chicago.msgpack",
+    "lines": 8
+  }
+]
