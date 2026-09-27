@@ -361,7 +361,7 @@ function App() {
         <div className="panel-divider" />
         <div className="section-heading"><h2>Network lines</h2><span>{layers.routes.length} routes</span></div>
         <div className="route-legend">
-          {layers.routes.map((route) => <div className="legend-row" key={route.id}><span className="legend-swatch" style={{ backgroundColor: route.color }} /><span>{route.name}</span><small>{route.id.startsWith('go_') ? 'GO' : 'TTC'}</small></div>)}
+          {layers.routes.map((route) => <div className="legend-row" key={route.id}><span className="legend-swatch" style={{ backgroundColor: route.color }} /><span>{route.name}</span><small>{activeCity.id === 'toronto' ? (route.id.startsWith('go_') ? 'GO' : 'TTC') : activeCity.operators}</small></div>)}
         </div>
         <div className="panel-footer"><span className="live-dot" />Static GTFS schedules <span>·</span> © OpenStreetMap</div>
       </aside>
