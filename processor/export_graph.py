@@ -34,26 +34,28 @@ Design choices, and why:
     arrays of numbers, this is a meaningful size win on top of gzip,
     not instead of it -- still worth serving compressed.
 
-Run directly:
-    python export_graph.py
-writes to:
-    data/graph.msgpack
+Run the city pipeline through `python -m processor.main`; it writes to the
+frontend's per-city public graph directory.
 """
 
 from pathlib import Path
 import shutil
+from math import log2
 
 import msgpack
 
 try:
     from .transit import BASE_DIR, load_data, build_graph, build_route_lookup, build_route_shapes
+    from .city_config import get_city
 except ImportError:
     from transit import BASE_DIR, load_data, build_graph, build_route_lookup, build_route_shapes
+    from city_config import get_city
 
 
-def export_graph(graph, stops, route_names, output_path=None, route_data=None, route_shapes=None):
+def export_graph(graph, stops, route_names, output_path=None, route_data=None, route_shapes=None, city_id="toronto", city_config=None):
     """Write the compact browser-facing schema, indexed by stop and route."""
-    frontend_output = BASE_DIR.parent / "frontend" / "jet-lag-frontend" / "public" / "graph.msgpack"
+    city_config = city_config or get_city(city_id)
+    frontend_output = BASE_DIR.parent / "frontend" / "jet-lag-frontend" / "public" / "cities" / f"{city_id}.msgpack"
     output_path = Path(output_path) if output_path else frontend_output
 
     # --- assign a stable integer index to every stop -------------------
@@ -172,13 +174,22 @@ def export_graph(graph, stops, route_names, output_path=None, route_data=None, r
                         })
         routes_out[route_idx]["segments"] = shaped_segments
 
+    station_modes = sorted({rule.get("mode", "rail") for rule in city_config["route_rules"]})
+    latitudes = [float(row["stop_lat"]) for row in stops.to_dict("records")]
+    longitudes = [float(row["stop_lon"]) for row in stops.to_dict("records")]
+    lat_span = max(latitudes) - min(latitudes)
+    lon_span = max(longitudes) - min(longitudes)
+    span = max(lat_span, lon_span, 0.01)
+    initial_zoom = max(5, min(12, round(log2(360 / span))))
     payload = {
         "version": 2,
-        "city": "Toronto",
-        "timeZone": "America/Toronto",
+        "city": city_config["name"],
+        "timeZone": city_config.get("timeZone", "UTC"),
+        "center": [(min(latitudes) + max(latitudes)) / 2, (min(longitudes) + max(longitudes)) / 2],
+        "initialZoom": initial_zoom,
         "timeUnit": "seconds-after-midnight",
-        "stationFilter": ["TTC subway", "TTC Line 5/6 LRT", "GO rail"],
-        "scheduleNote": "Trips from all service days are included; filter by service calendar when adding date-aware queries.",
+        "stationFilter": station_modes,
+        "scheduleNote": city_config.get("scheduleNote", "Trips from all service days are included; service calendars are not applied."),
         "stops": stops_out,
         "routes": routes_out,
         "graph": graph_out,
@@ -193,7 +204,7 @@ def export_graph(graph, stops, route_names, output_path=None, route_data=None, r
         f.write(msgpack.packb(payload, use_bin_type=True))
 
     # Keep the processor copy in sync when writing to the default frontend path.
-    processor_output = BASE_DIR / "data" / "graph.msgpack"
+    processor_output = BASE_DIR / "data" / "cities" / f"{city_id}.msgpack"
     if output_path == frontend_output:
         processor_output.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(output_path, processor_output)
@@ -205,10 +216,12 @@ def export_graph(graph, stops, route_names, output_path=None, route_data=None, r
 
 
 if __name__ == "__main__":
-    stop_times, trips, stops, routes = load_data()
-    graph = build_graph(stop_times, trips, stops)
+    city_config = get_city("toronto")
+    agencies = {feed: BASE_DIR.parent / spec.get("directory", f"data/toronto/{feed}") for feed, spec in city_config["feeds"].items()}
+    stop_times, trips, stops, routes = load_data(agencies, city_config["route_rules"])
+    graph = build_graph(stop_times, trips, stops, agencies)
     route_names = build_route_lookup(routes)
-    route_shapes = build_route_shapes(stop_times, trips, stops)
+    route_shapes = build_route_shapes(stop_times, trips, stops, agencies)
     print("Graph ready")
 
-    export_graph(graph, stops, route_names, route_data=routes, route_shapes=route_shapes)
+    export_graph(graph, stops, route_names, route_data=routes, route_shapes=route_shapes, city_config=city_config)

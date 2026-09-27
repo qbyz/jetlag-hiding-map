@@ -42,6 +42,7 @@
 .network-map { position: absolute; inset: 0; z-index: 0; background: var(--brand-onyx); }
 .leaflet-container { background: var(--brand-onyx); font-family: 'Commissioner', ui-sans-serif, system-ui, sans-serif; }
 .osm-dark-tiles { filter: grayscale(1) invert(1) brightness(.78) contrast(.9); }
+.osm-salt-spring-tiles { filter: saturate(.8) brightness(.9) contrast(.95); }
 .leaflet-control-zoom { border: 1px solid #364047 !important; box-shadow: 0 8px 28px #0007 !important; }
 .leaflet-control-zoom a { background: #1a2227 !important; color: #ecf2f2 !important; border-color: #364047 !important; }
 .leaflet-control-attribution { background: #101619d9 !important; color: #929da2 !important; font-size: 10px !important; }

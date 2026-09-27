@@ -11,29 +11,26 @@ import zipfile
 import requests
 
 try:
-    from .config import GO_GTFS_URL, TORONTO_CKAN_PACKAGE_SHOW_URL, TTC_DATASET_ID
+    from .city_config import get_city
 except ImportError:
-    from config import GO_GTFS_URL, TORONTO_CKAN_PACKAGE_SHOW_URL, TTC_DATASET_ID
+    from city_config import get_city
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
-AGENCIES = {
-    "ttc": {"dataset": TTC_DATASET_ID, "api": TORONTO_CKAN_PACKAGE_SHOW_URL},
-    "go": {"url": GO_GTFS_URL},
-}
+PROJECT_DIR = BASE_DIR.parent
 
 
-def _latest_ttc_url(session: requests.Session) -> str:
+def _latest_feed_url(session: requests.Session, metadata_url: str, dataset_id: str) -> str:
     response = session.get(
-        AGENCIES["ttc"]["api"],
-        params={"id": AGENCIES["ttc"]["dataset"]},
+        metadata_url,
+        params={"id": dataset_id},
         timeout=60,
     )
     response.raise_for_status()
     payload = response.json()
     if not payload.get("success"):
-        raise RuntimeError("Toronto Open Data did not return the TTC dataset metadata")
+        raise RuntimeError(f"Dataset metadata was not returned for {dataset_id}")
 
     resources = payload["result"].get("resources", [])
     candidates = [
@@ -46,7 +43,7 @@ def _latest_ttc_url(session: requests.Session) -> str:
         )
     ]
     if not candidates:
-        raise RuntimeError("No ZIP resource was found in the TTC dataset metadata")
+        raise RuntimeError(f"No ZIP resource was found for dataset {dataset_id}")
 
     # Prefer the most recently modified resource when the dataset retains old
     # snapshots. Resource order is a fallback for feeds without timestamps.
@@ -67,26 +64,43 @@ def _safe_extract(zip_path: Path, target_dir: Path) -> None:
         archive.extractall(target_dir)
 
 
-def download_agency(agency: str, *, session: requests.Session | None = None) -> Path:
-    if agency not in AGENCIES:
-        raise ValueError(f"Unknown GTFS agency: {agency}")
+def download_feed(city_id: str, feed_id: str, feed: dict, *, session: requests.Session | None = None) -> Path:
     session = session or requests.Session()
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    city_data_dir = DATA_DIR / city_id
+    city_data_dir.mkdir(parents=True, exist_ok=True)
 
-    url = _latest_ttc_url(session) if agency == "ttc" else AGENCIES[agency]["url"]
-    destination = DATA_DIR / f"{agency}.zip"
-    print(f"Downloading {agency.upper()} GTFS...")
-    with session.get(url, stream=True, timeout=(30, 180)) as response:
-        response.raise_for_status()
-        with tempfile.NamedTemporaryFile(dir=DATA_DIR, delete=False) as tmp:
-            temp_path = Path(tmp.name)
-            try:
-                for chunk in response.iter_content(chunk_size=1024 * 1024):
-                    if chunk:
-                        tmp.write(chunk)
-            except Exception:
-                temp_path.unlink(missing_ok=True)
-                raise
+    if feed.get("metadata_url"):
+        url = _latest_feed_url(session, feed["metadata_url"], feed["dataset_id"])
+    else:
+        url = feed.get("url")
+    if not url:
+        raise ValueError(f"Feed {feed_id!r} for {city_id!r} needs url or metadata_url/dataset_id")
+    request_params = {}
+    for key, value in feed.get("url_params", {}).items():
+        if isinstance(value, dict) and "env" in value:
+            env_var = value["env"]
+            value = os.environ.get(env_var)
+            if not value:
+                raise RuntimeError(f"Set {env_var} to download the {feed_id.upper()} feed")
+        request_params[key] = value
+    destination = city_data_dir / f"{feed_id}.zip"
+    print(f"Downloading {city_id} / {feed_id} GTFS...")
+    try:
+        with session.get(url, params=request_params, stream=True, timeout=(30, 180)) as response:
+            response.raise_for_status()
+            with tempfile.NamedTemporaryFile(dir=city_data_dir, delete=False) as tmp:
+                temp_path = Path(tmp.name)
+                try:
+                    for chunk in response.iter_content(chunk_size=1024 * 1024):
+                        if chunk:
+                            tmp.write(chunk)
+                except Exception:
+                    temp_path.unlink(missing_ok=True)
+                    raise
+    except requests.RequestException as exc:
+        response = getattr(exc, "response", None)
+        status = f" (HTTP {response.status_code})" if response is not None else ""
+        raise RuntimeError(f"Could not download the {feed_id.upper()} feed for {city_id}{status}; check network access and feed authorization.") from None
     temp_path.replace(destination)
 
     # Validate before replacing the current extracted feed.
@@ -94,17 +108,18 @@ def download_agency(agency: str, *, session: requests.Session | None = None) -> 
         names = {Path(name).name for name in archive.namelist()}
         if not {"stops.txt", "routes.txt", "trips.txt", "stop_times.txt"}.issubset(names):
             destination.unlink(missing_ok=True)
-            raise RuntimeError(f"Downloaded {agency.upper()} archive is missing required GTFS files")
+            raise RuntimeError(f"Downloaded {feed_id.upper()} archive is missing required GTFS files")
 
-    extract_to = DATA_DIR / agency
-    staging = Path(tempfile.mkdtemp(prefix=f".{agency}-", dir=DATA_DIR))
+    extract_to = PROJECT_DIR / feed.get("directory", f"data/{city_id}/{feed_id}")
+    extract_to.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{feed_id}-", dir=extract_to.parent))
     try:
         _safe_extract(destination, staging)
         if not (staging / "stops.txt").exists():
             # Some feeds wrap the GTFS files in a single containing directory.
             nested = next((p for p in staging.iterdir() if p.is_dir() and (p / "stops.txt").exists()), None)
             if nested is None:
-                raise RuntimeError(f"Could not find stops.txt in {agency.upper()} archive")
+                raise RuntimeError(f"Could not find stops.txt in {feed_id.upper()} archive")
             for child in nested.iterdir():
                 target = staging / child.name
                 if child.is_dir():
@@ -113,7 +128,7 @@ def download_agency(agency: str, *, session: requests.Session | None = None) -> 
                     os.replace(child, target)
             nested.rmdir()
 
-        backup = DATA_DIR / f".{agency}-previous"
+        backup = city_data_dir / f".{feed_id}-previous"
         if backup.exists():
             shutil.rmtree(backup)
         if extract_to.exists():
@@ -125,15 +140,26 @@ def download_agency(agency: str, *, session: requests.Session | None = None) -> 
         if staging.exists():
             shutil.rmtree(staging)
 
-    print(f"Extracted {agency.upper()} GTFS to {extract_to}")
+    print(f"Extracted {feed_id.upper()} GTFS to {extract_to}")
     return extract_to
 
 
+def download_city(city_id: str, *, session: requests.Session | None = None) -> None:
+    city = get_city(city_id)
+    session = session or requests.Session()
+    session.headers["User-Agent"] = "transit-isochrone-generator/0.1 (GTFS graph builder)"
+    for feed_id, feed in city["feeds"].items():
+        download_feed(city_id, feed_id, feed, session=session)
+
+
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--city", default="toronto", help="city id from cities.json")
+    args = parser.parse_args()
     with requests.Session() as session:
-        session.headers["User-Agent"] = "jetlag-hiding-map/0.1 (GTFS graph builder)"
-        for agency in AGENCIES:
-            download_agency(agency, session=session)
+        download_city(args.city, session=session)
 
 
 if __name__ == "__main__":

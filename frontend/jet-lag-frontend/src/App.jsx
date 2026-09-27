@@ -5,17 +5,14 @@ import { CircleMarker, MapContainer, Pane, Polyline, TileLayer, Tooltip, ZoomCon
 import 'leaflet/dist/leaflet.css'
 import './App.css'
 
-const DEFAULT_TIME = () => {
-  const now = new Date()
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-}
+const DEFAULT_TIME = (timeZone = 'UTC') => new Intl.DateTimeFormat('en-GB', {
+  timeZone,
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+}).format(new Date())
 
-// Add future cities here with their graph path and network labels.
-const CITIES = [
-  { id: 'toronto', name: 'Toronto', region: 'Ontario, Canada', operators: 'TTC + GO', graphPath: '/graph.msgpack', lines: 12 },
-]
-
-function CityPicker({ onSelect }) {
+function CityPicker({ cities, onSelect }) {
   return (
     <main className="city-picker">
       <div className="city-picker-glow city-picker-glow-one" />
@@ -26,7 +23,7 @@ function CityPicker({ onSelect }) {
       <section className="city-picker-content">
         <h1>Cities</h1>
         <div className="city-grid" aria-label="Available cities">
-          {CITIES.map((city) => (
+          {cities.map((city) => (
             <button className="city-card" key={city.id} onClick={() => onSelect(city)}>
               <span className="city-card-name">{city.name}</span>
               <span className="city-card-region">{city.region}</span>
@@ -201,6 +198,8 @@ function PasswordLock({ onUnlock }) {
 
 function App() {
   const [unlocked, setUnlocked] = useState(false)
+  const [cities, setCities] = useState(null)
+  const [cityLoadError, setCityLoadError] = useState('')
   const [activeCity, setActiveCity] = useState(null)
   const [graphState, setGraphState] = useState({ cityId: null, data: null, error: '' })
   const [selectedStation, setSelectedStation] = useState(null)
@@ -208,6 +207,22 @@ function App() {
   const [budget, setBudget] = useState('60')
   const [reachability, setReachability] = useState(null)
   const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    let active = true
+    fetch('/cities.json')
+      .then((response) => {
+        if (!response.ok) throw new Error('The city list could not be loaded. Run the data pipeline to generate it.')
+        return response.json()
+      })
+      .then((manifest) => {
+        if (active) setCities(manifest)
+      })
+      .catch((error) => {
+        if (active) setCityLoadError(error.message || 'The city list could not be loaded.')
+      })
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     if (!activeCity) return undefined
@@ -242,7 +257,7 @@ function App() {
 
   const openStation = (index) => {
     setSelectedStation(index)
-    setStartTime(DEFAULT_TIME())
+    setStartTime(DEFAULT_TIME(activeCity?.timeZone))
   }
 
   const submitQuery = (event) => {
@@ -267,20 +282,22 @@ function App() {
     .map((segment) => segment.positions)
 
   if (!unlocked) return <PasswordLock onUnlock={() => setUnlocked(true)} />
-  if (!activeCity) return <CityPicker onSelect={setActiveCity} />
+  if (cityLoadError) return <main className="app-state error-state"><h1>Couldn’t load cities</h1><p>{cityLoadError}</p></main>
+  if (!cities) return <main className="app-state"><span className="loader" /><p>Loading cities…</p></main>
+  if (!activeCity) return <CityPicker cities={cities} onSelect={setActiveCity} />
   if (loadError) return <main className="app-state error-state"><h1>Couldn’t load the map</h1><p>{loadError}</p></main>
-  if (!data || !layers) return <main className="app-state"><span className="loader" /><p>Loading Toronto rail network…</p></main>
+  if (!data || !layers) return <main className="app-state"><span className="loader" /><p>Loading {activeCity.name} network…</p></main>
 
   const allSegments = layers.routes.flatMap((route) => route.segments.map((segment) => segment.positions))
   const activeSegments = reachability ? layers.routes.map((route) => ({ ...route, active: routeSegmentsReachable(route.segments) })) : []
 
   return (
     <main className="app-shell">
-      <MapContainer className="network-map" center={[43.72, -79.32]} zoom={9} zoomControl={false} preferCanvas>
+      <MapContainer className="network-map" center={data.center || [43.72, -79.32]} zoom={data.initialZoom || 9} zoomControl={false} preferCanvas>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          className="osm-dark-tiles"
+          className={activeCity.id === 'salt-spring-island' ? 'osm-salt-spring-tiles' : 'osm-dark-tiles'}
           maxZoom={20}
         />
         <ZoomControl position="bottomright" />

@@ -60,24 +60,31 @@ def _load_agency(agency: str, directory: Path):
     return stop_times, trips, stops, routes
 
 
-def _station_mode(route):
-    """Return the map-worthy rail mode for a route, or None for surface routes."""
+def _station_mode(route, route_rules):
+    """Apply city route rules; only explicitly included routes enter the graph."""
     route_type = str(route.get("route_type", "")).strip()
     agency = str(route.get("agency", ""))
-    long = str(route.get("route_long_name", "")).strip().lower()
-    if route_type == "1":
-        return "subway"
-    if route_type == "2" or (route_type.isdigit() and (100 <= int(route_type) <= 199 or 400 <= int(route_type) <= 499)):
-        return "rail"
-    # TTC's GTFS labels subway and LRT as route types 1 and 0 respectively;
-    # route names distinguish Lines 5/6 from the streetcar network (also type 0).
-    if agency == "ttc" and route_type == "0" and (long.startswith("line 5") or long.startswith("line 6")):
-        return "light_rail"
+    long_name = str(route.get("route_long_name", "")).strip().lower()
+    short_name = str(route.get("route_short_name", "")).strip().lower()
+    name = " ".join(part for part in (short_name, long_name) if part)
+    for rule in route_rules:
+        if rule.get("feed") != agency or route_type not in {str(value) for value in rule.get("route_types", [])}:
+            continue
+        prefixes = [str(prefix).lower() for prefix in rule.get("route_name_prefixes", [])]
+        if prefixes and not any(long_name.startswith(prefix) or short_name.startswith(prefix) or name.startswith(prefix) for prefix in prefixes):
+            continue
+        return rule.get("mode", "rail")
     return None
 
 
-def load_data(agencies=None):
+def load_data(agencies=None, route_rules=None):
     agencies = agencies or AGENCIES
+    if route_rules is None:
+        try:
+            from .city_config import get_city
+        except ImportError:
+            from city_config import get_city
+        route_rules = get_city("toronto")["route_rules"]
     loaded = []
     for agency, directory in agencies.items():
         directory = Path(directory)
@@ -90,15 +97,20 @@ def load_data(agencies=None):
 
     combined = [pd.concat([feed[i] for feed in loaded], ignore_index=True) for i in range(4)]
     stop_times, trips, stops, routes = combined
-    routes["agency"] = routes["route_id"].str.split("_", n=1).str[0]
-    routes["station_mode"] = routes.apply(_station_mode, axis=1)
+    # Feed ids may contain underscores (e.g. bc_transit); match the full,
+    # longest configured prefix instead of splitting at the first underscore.
+    feed_prefixes = sorted(agencies, key=len, reverse=True)
+    routes["agency"] = routes["route_id"].map(
+        lambda route_id: next((feed for feed in feed_prefixes if str(route_id).startswith(f"{feed}_")), "")
+    )
+    routes["station_mode"] = routes.apply(lambda route: _station_mode(route, route_rules), axis=1)
     routes = routes[routes["station_mode"].notna()].reset_index(drop=True)
     rail_route_ids = set(routes["route_id"])
     trips = trips[trips["route_id"].isin(rail_route_ids)].reset_index(drop=True)
     rail_trip_ids = set(trips["trip_id"])
     stop_times = stop_times[stop_times["trip_id"].isin(rail_trip_ids)].copy()
     if stop_times.empty:
-        raise ValueError("No subway, GO rail, or TTC Line 5/6 trips found in the feeds")
+        raise ValueError("No trips matched the configured route_rules in the selected GTFS feeds")
 
     trip_modes = trips.set_index("trip_id")["route_id"].map(routes.set_index("route_id")["station_mode"])
     stop_times["station_mode"] = stop_times["trip_id"].map(trip_modes)

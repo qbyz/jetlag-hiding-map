@@ -329,4 +329,4 @@ if __name__ == "__main__":
         budget_seconds=20 * 60
     )
     for name, minutes in format_reachable(reachable, stops, departure):
-        print(f"  {name} ({minutes:.1f} min)")e
+        print(f"  {name} ({minutes:.1f} min)")
