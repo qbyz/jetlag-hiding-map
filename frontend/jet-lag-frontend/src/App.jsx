@@ -12,6 +12,165 @@ const DEFAULT_TIME = (timeZone = 'UTC') => new Intl.DateTimeFormat('en-GB', {
   hourCycle: 'h23',
 }).format(new Date())
 
+// Toronto game scores supplied for the current TTC and Toronto GO station inventory.
+// Key by normalized display name so graph stop IDs and feed-specific IDs do not matter.
+const TORONTO_STATION_SCORES = {
+  'finch': { accessibility: 7, uniqueness: 9, zone_quality: 12, search_complexity: 10, endgame_potential: 11, total: 49, status: 'active' },
+  'north york centre': { accessibility: 8, uniqueness: 11, zone_quality: 13, search_complexity: 12, endgame_potential: 13, total: 57, status: 'active' },
+  'sheppard-yonge': { accessibility: 5, uniqueness: 7, zone_quality: 15, search_complexity: 13, endgame_potential: 14, total: 54, status: 'active' },
+  'york mills': { accessibility: 8, uniqueness: 12, zone_quality: 14, search_complexity: 13, endgame_potential: 14, total: 61, status: 'active' },
+  'lawrence': { accessibility: 8, uniqueness: 12, zone_quality: 13, search_complexity: 12, endgame_potential: 14, total: 59, status: 'active' },
+  'eglinton': { accessibility: 4, uniqueness: 6, zone_quality: 18, search_complexity: 17, endgame_potential: 17, total: 62, status: 'active' },
+  'davisville': { accessibility: 8, uniqueness: 12, zone_quality: 15, search_complexity: 14, endgame_potential: 16, total: 65, status: 'active' },
+  'st clair': { accessibility: 7, uniqueness: 10, zone_quality: 16, search_complexity: 15, endgame_potential: 16, total: 64, status: 'active' },
+  'summerhill': { accessibility: 9, uniqueness: 13, zone_quality: 15, search_complexity: 15, endgame_potential: 16, total: 68, status: 'active' },
+  'rosedale': { accessibility: 10, uniqueness: 14, zone_quality: 17, search_complexity: 16, endgame_potential: 17, total: 74, status: 'active' },
+  'bloor-yonge': { accessibility: 3, uniqueness: 4, zone_quality: 19, search_complexity: 17, endgame_potential: 18, total: 61, status: 'active' },
+  'wellesley': { accessibility: 7, uniqueness: 9, zone_quality: 17, search_complexity: 15, endgame_potential: 17, total: 65, status: 'active' },
+  'college': { accessibility: 6, uniqueness: 8, zone_quality: 18, search_complexity: 16, endgame_potential: 18, total: 68, status: 'active' },
+  'tmu': { accessibility: 5, uniqueness: 7, zone_quality: 18, search_complexity: 16, endgame_potential: 18, total: 64, status: 'active' },
+  'queen': { accessibility: 4, uniqueness: 5, zone_quality: 19, search_complexity: 16, endgame_potential: 18, total: 62, status: 'active' },
+  'king': { accessibility: 4, uniqueness: 6, zone_quality: 20, search_complexity: 17, endgame_potential: 18, total: 65, status: 'active' },
+  'union': { accessibility: 2, uniqueness: 2, zone_quality: 20, search_complexity: 13, endgame_potential: 16, total: 53, status: 'active' },
+  'st andrew': { accessibility: 4, uniqueness: 6, zone_quality: 19, search_complexity: 16, endgame_potential: 18, total: 63, status: 'active' },
+  'osgoode': { accessibility: 5, uniqueness: 8, zone_quality: 19, search_complexity: 17, endgame_potential: 18, total: 67, status: 'active' },
+  'st patrick': { accessibility: 5, uniqueness: 9, zone_quality: 18, search_complexity: 16, endgame_potential: 17, total: 65, status: 'active' },
+  'queen\'s park': { accessibility: 6, uniqueness: 9, zone_quality: 18, search_complexity: 17, endgame_potential: 18, total: 68, status: 'active' },
+  'museum': { accessibility: 8, uniqueness: 12, zone_quality: 18, search_complexity: 17, endgame_potential: 18, total: 73, status: 'active' },
+  'st george': { accessibility: 4, uniqueness: 6, zone_quality: 19, search_complexity: 17, endgame_potential: 18, total: 64, status: 'active' },
+  'spadina': { accessibility: 4, uniqueness: 5, zone_quality: 19, search_complexity: 16, endgame_potential: 18, total: 62, status: 'active' },
+  'dupont': { accessibility: 8, uniqueness: 12, zone_quality: 17, search_complexity: 15, endgame_potential: 17, total: 69, status: 'active' },
+  'st clair west': { accessibility: 7, uniqueness: 11, zone_quality: 16, search_complexity: 15, endgame_potential: 16, total: 65, status: 'active' },
+  'cedarvale': { accessibility: 8, uniqueness: 13, zone_quality: 15, search_complexity: 14, endgame_potential: 15, total: 65, status: 'active' },
+  'glencairn': { accessibility: 9, uniqueness: 14, zone_quality: 13, search_complexity: 12, endgame_potential: 14, total: 62, status: 'active' },
+  'lawrence west': { accessibility: 9, uniqueness: 13, zone_quality: 14, search_complexity: 13, endgame_potential: 15, total: 64, status: 'active' },
+  'yorkdale': { accessibility: 6, uniqueness: 8, zone_quality: 17, search_complexity: 15, endgame_potential: 16, total: 62, status: 'active' },
+  'wilson': { accessibility: 9, uniqueness: 14, zone_quality: 14, search_complexity: 13, endgame_potential: 15, total: 65, status: 'active' },
+  'sheppard west': { accessibility: 9, uniqueness: 14, zone_quality: 13, search_complexity: 12, endgame_potential: 14, total: 62, status: 'active' },
+  'downsview park': { accessibility: 11, uniqueness: 16, zone_quality: 12, search_complexity: 11, endgame_potential: 13, total: 63, status: 'active' },
+  'finch west': { accessibility: 8, uniqueness: 11, zone_quality: 13, search_complexity: 12, endgame_potential: 13, total: 57, status: 'active' },
+  'york university': { accessibility: 8, uniqueness: 12, zone_quality: 14, search_complexity: 14, endgame_potential: 14, total: 62, status: 'active' },
+  'pioneer village': { accessibility: 9, uniqueness: 14, zone_quality: 13, search_complexity: 12, endgame_potential: 14, total: 62, status: 'active' },
+  'highway 407': { accessibility: 15, uniqueness: 17, zone_quality: 8, search_complexity: 8, endgame_potential: 9, total: 57, status: 'active' },
+  'vaughan metropolitan centre': { accessibility: 11, uniqueness: 15, zone_quality: 12, search_complexity: 11, endgame_potential: 13, total: 62, status: 'active' },
+  'kipling': { accessibility: 8, uniqueness: 10, zone_quality: 14, search_complexity: 12, endgame_potential: 14, total: 58, status: 'active' },
+  'islington': { accessibility: 9, uniqueness: 12, zone_quality: 14, search_complexity: 13, endgame_potential: 15, total: 63, status: 'active' },
+  'royal york': { accessibility: 10, uniqueness: 13, zone_quality: 15, search_complexity: 14, endgame_potential: 16, total: 68, status: 'active' },
+  'old mill': { accessibility: 13, uniqueness: 16, zone_quality: 17, search_complexity: 17, endgame_potential: 18, total: 81, status: 'active' },
+  'jane': { accessibility: 9, uniqueness: 13, zone_quality: 16, search_complexity: 14, endgame_potential: 16, total: 68, status: 'active' },
+  'runnymede': { accessibility: 10, uniqueness: 13, zone_quality: 15, search_complexity: 14, endgame_potential: 16, total: 68, status: 'active' },
+  'high park': { accessibility: 11, uniqueness: 14, zone_quality: 18, search_complexity: 17, endgame_potential: 18, total: 78, status: 'active' },
+  'keele': { accessibility: 9, uniqueness: 12, zone_quality: 16, search_complexity: 15, endgame_potential: 17, total: 69, status: 'active' },
+  'dundas west': { accessibility: 6, uniqueness: 8, zone_quality: 18, search_complexity: 16, endgame_potential: 17, total: 65, status: 'active' },
+  'lansdowne': { accessibility: 10, uniqueness: 14, zone_quality: 16, search_complexity: 15, endgame_potential: 17, total: 72, status: 'active' },
+  'dufferin': { accessibility: 8, uniqueness: 10, zone_quality: 17, search_complexity: 15, endgame_potential: 17, total: 67, status: 'active' },
+  'ossington': { accessibility: 8, uniqueness: 12, zone_quality: 17, search_complexity: 16, endgame_potential: 17, total: 70, status: 'active' },
+  'christie': { accessibility: 9, uniqueness: 13, zone_quality: 16, search_complexity: 15, endgame_potential: 17, total: 70, status: 'active' },
+  'bathurst': { accessibility: 7, uniqueness: 9, zone_quality: 18, search_complexity: 16, endgame_potential: 18, total: 68, status: 'active' },
+  'bay': { accessibility: 5, uniqueness: 8, zone_quality: 19, search_complexity: 18, endgame_potential: 18, total: 68, status: 'active' },
+  'sherbourne': { accessibility: 7, uniqueness: 11, zone_quality: 18, search_complexity: 16, endgame_potential: 18, total: 70, status: 'active' },
+  'castle frank': { accessibility: 10, uniqueness: 14, zone_quality: 17, search_complexity: 17, endgame_potential: 18, total: 76, status: 'active' },
+  'broadview': { accessibility: 6, uniqueness: 9, zone_quality: 18, search_complexity: 17, endgame_potential: 18, total: 68, status: 'active' },
+  'chester': { accessibility: 10, uniqueness: 14, zone_quality: 17, search_complexity: 17, endgame_potential: 18, total: 76, status: 'active' },
+  'pape': { accessibility: 7, uniqueness: 9, zone_quality: 18, search_complexity: 16, endgame_potential: 18, total: 68, status: 'active' },
+  'donlands': { accessibility: 10, uniqueness: 14, zone_quality: 16, search_complexity: 15, endgame_potential: 17, total: 72, status: 'active' },
+  'greenwood': { accessibility: 9, uniqueness: 13, zone_quality: 17, search_complexity: 16, endgame_potential: 18, total: 73, status: 'active' },
+  'coxwell': { accessibility: 9, uniqueness: 13, zone_quality: 16, search_complexity: 15, endgame_potential: 17, total: 70, status: 'active' },
+  'woodbine': { accessibility: 9, uniqueness: 13, zone_quality: 16, search_complexity: 15, endgame_potential: 17, total: 70, status: 'active' },
+  'main street': { accessibility: 8, uniqueness: 11, zone_quality: 17, search_complexity: 15, endgame_potential: 17, total: 68, status: 'active' },
+  'victoria park': { accessibility: 11, uniqueness: 14, zone_quality: 15, search_complexity: 13, endgame_potential: 16, total: 69, status: 'active' },
+  'warden': { accessibility: 12, uniqueness: 15, zone_quality: 13, search_complexity: 12, endgame_potential: 14, total: 66, status: 'active' },
+  'kennedy': { accessibility: 5, uniqueness: 6, zone_quality: 16, search_complexity: 14, endgame_potential: 15, total: 56, status: 'active' },
+  'scarborough centre': { accessibility: 10, uniqueness: 13, zone_quality: 14, search_complexity: 13, endgame_potential: 15, total: 65, status: 'replacement_bus_only' },
+  'union go': { accessibility: 2, uniqueness: 2, zone_quality: 20, search_complexity: 13, endgame_potential: 16, total: 53, status: 'active' },
+  'bloor go': { accessibility: 7, uniqueness: 8, zone_quality: 18, search_complexity: 15, endgame_potential: 17, total: 65, status: 'active' },
+  'danforth go': { accessibility: 10, uniqueness: 12, zone_quality: 17, search_complexity: 15, endgame_potential: 17, total: 71, status: 'active' },
+  'exhibition go': { accessibility: 7, uniqueness: 10, zone_quality: 19, search_complexity: 16, endgame_potential: 18, total: 70, status: 'active' },
+  'mimico go': { accessibility: 12, uniqueness: 14, zone_quality: 15, search_complexity: 14, endgame_potential: 16, total: 71, status: 'active' },
+  'long branch go': { accessibility: 13, uniqueness: 15, zone_quality: 14, search_complexity: 13, endgame_potential: 15, total: 70, status: 'active' },
+  'etobicoke north go': { accessibility: 15, uniqueness: 17, zone_quality: 10, search_complexity: 9, endgame_potential: 12, total: 63, status: 'active' },
+  'weston go': { accessibility: 12, uniqueness: 14, zone_quality: 13, search_complexity: 12, endgame_potential: 14, total: 65, status: 'active' },
+  'mount dennis go': { accessibility: 12, uniqueness: 16, zone_quality: 14, search_complexity: 14, endgame_potential: 15, total: 71, status: 'active' },
+  'kipling go': { accessibility: 9, uniqueness: 11, zone_quality: 15, search_complexity: 13, endgame_potential: 15, total: 63, status: 'active' },
+  'downsview park go': { accessibility: 11, uniqueness: 16, zone_quality: 12, search_complexity: 11, endgame_potential: 13, total: 63, status: 'active' },
+  'old cummer go': { accessibility: 15, uniqueness: 18, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 67, status: 'active' },
+  'oriole go': { accessibility: 14, uniqueness: 17, zone_quality: 12, search_complexity: 11, endgame_potential: 14, total: 68, status: 'active' },
+  'eglinton go': { accessibility: 15, uniqueness: 18, zone_quality: 10, search_complexity: 9, endgame_potential: 12, total: 64, status: 'active' },
+  'kennedy go': { accessibility: 5, uniqueness: 6, zone_quality: 16, search_complexity: 14, endgame_potential: 15, total: 56, status: 'active' },
+  'scarborough go': { accessibility: 14, uniqueness: 17, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 65, status: 'active' },
+  'guildwood go': { accessibility: 16, uniqueness: 18, zone_quality: 10, search_complexity: 10, endgame_potential: 13, total: 67, status: 'active' },
+  'rouge hill go': { accessibility: 17, uniqueness: 19, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 70, status: 'active' },
+  'agincourt go': { accessibility: 15, uniqueness: 18, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 67, status: 'active' },
+  'milliken go': { accessibility: 15, uniqueness: 18, zone_quality: 10, search_complexity: 9, endgame_potential: 12, total: 64, status: 'active' },
+  // Remaining TTC Line 2, 4, 5 and 6 stations.
+  'bayview': { accessibility: 10, uniqueness: 13, zone_quality: 15, search_complexity: 15, endgame_potential: 16, total: 69, status: 'active' },
+  'bessarion': { accessibility: 12, uniqueness: 16, zone_quality: 12, search_complexity: 11, endgame_potential: 14, total: 65, status: 'active' },
+  'leslie': { accessibility: 12, uniqueness: 15, zone_quality: 13, search_complexity: 12, endgame_potential: 14, total: 66, status: 'active' },
+  'don mills': { accessibility: 10, uniqueness: 12, zone_quality: 16, search_complexity: 15, endgame_potential: 16, total: 69, status: 'active' },
+  'mount dennis': { accessibility: 12, uniqueness: 16, zone_quality: 14, search_complexity: 14, endgame_potential: 15, total: 71, status: 'active' },
+  'keelesdale': { accessibility: 11, uniqueness: 15, zone_quality: 14, search_complexity: 14, endgame_potential: 15, total: 69, status: 'active' },
+  'caledonia': { accessibility: 12, uniqueness: 16, zone_quality: 13, search_complexity: 13, endgame_potential: 14, total: 68, status: 'active' },
+  'fairbank': { accessibility: 11, uniqueness: 14, zone_quality: 16, search_complexity: 15, endgame_potential: 16, total: 72, status: 'active' },
+  'oakwood': { accessibility: 10, uniqueness: 13, zone_quality: 17, search_complexity: 16, endgame_potential: 17, total: 73, status: 'active' },
+  'forest hill': { accessibility: 11, uniqueness: 15, zone_quality: 16, search_complexity: 16, endgame_potential: 17, total: 75, status: 'active' },
+  'chaplin': { accessibility: 11, uniqueness: 14, zone_quality: 15, search_complexity: 14, endgame_potential: 16, total: 70, status: 'active' },
+  'avenue': { accessibility: 10, uniqueness: 13, zone_quality: 16, search_complexity: 15, endgame_potential: 17, total: 71, status: 'active' },
+  'mount pleasant': { accessibility: 10, uniqueness: 14, zone_quality: 16, search_complexity: 15, endgame_potential: 17, total: 72, status: 'active' },
+  'leaside': { accessibility: 11, uniqueness: 14, zone_quality: 15, search_complexity: 15, endgame_potential: 16, total: 71, status: 'active' },
+  'laird': { accessibility: 10, uniqueness: 14, zone_quality: 14, search_complexity: 13, endgame_potential: 15, total: 66, status: 'active' },
+  'sunnybrook park': { accessibility: 13, uniqueness: 17, zone_quality: 16, search_complexity: 17, endgame_potential: 18, total: 81, status: 'active' },
+  'don valley': { accessibility: 14, uniqueness: 18, zone_quality: 15, search_complexity: 16, endgame_potential: 18, total: 81, status: 'active' },
+  'aga khan park & museum': { accessibility: 12, uniqueness: 16, zone_quality: 17, search_complexity: 17, endgame_potential: 18, total: 80, status: 'active' },
+  'wynford': { accessibility: 13, uniqueness: 16, zone_quality: 13, search_complexity: 12, endgame_potential: 15, total: 69, status: 'active' },
+  'sloane': { accessibility: 13, uniqueness: 17, zone_quality: 12, search_complexity: 11, endgame_potential: 14, total: 67, status: 'active' },
+  'o\'connor': { accessibility: 13, uniqueness: 16, zone_quality: 14, search_complexity: 13, endgame_potential: 15, total: 71, status: 'active' },
+  'pharmacy': { accessibility: 13, uniqueness: 16, zone_quality: 15, search_complexity: 14, endgame_potential: 16, total: 74, status: 'active' },
+  'hakimi lebovic': { accessibility: 13, uniqueness: 17, zone_quality: 12, search_complexity: 11, endgame_potential: 14, total: 67, status: 'active' },
+  'golden mile': { accessibility: 13, uniqueness: 17, zone_quality: 13, search_complexity: 12, endgame_potential: 15, total: 70, status: 'active' },
+  'birchmount': { accessibility: 13, uniqueness: 16, zone_quality: 14, search_complexity: 13, endgame_potential: 15, total: 71, status: 'active' },
+  'ionview': { accessibility: 12, uniqueness: 16, zone_quality: 14, search_complexity: 14, endgame_potential: 15, total: 71, status: 'active' },
+  'sentinel': { accessibility: 12, uniqueness: 16, zone_quality: 12, search_complexity: 11, endgame_potential: 13, total: 64, status: 'active' },
+  'tobermory': { accessibility: 13, uniqueness: 17, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 64, status: 'active' },
+  'driftwood': { accessibility: 13, uniqueness: 16, zone_quality: 12, search_complexity: 11, endgame_potential: 14, total: 66, status: 'active' },
+  'jane and finch': { accessibility: 10, uniqueness: 13, zone_quality: 15, search_complexity: 14, endgame_potential: 16, total: 68, status: 'active' },
+  'norfinch oakdale': { accessibility: 14, uniqueness: 18, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 66, status: 'active' },
+  'signet arrow': { accessibility: 14, uniqueness: 18, zone_quality: 10, search_complexity: 9, endgame_potential: 12, total: 63, status: 'active' },
+  'emery': { accessibility: 13, uniqueness: 17, zone_quality: 12, search_complexity: 11, endgame_potential: 14, total: 67, status: 'active' },
+  'milvan rumike': { accessibility: 14, uniqueness: 18, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 66, status: 'active' },
+  'duncanwoods': { accessibility: 14, uniqueness: 18, zone_quality: 10, search_complexity: 9, endgame_potential: 12, total: 63, status: 'active' },
+  'pearldale': { accessibility: 14, uniqueness: 18, zone_quality: 10, search_complexity: 9, endgame_potential: 12, total: 63, status: 'active' },
+  'rowntree mills': { accessibility: 14, uniqueness: 17, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 65, status: 'active' },
+  'mount olive': { accessibility: 14, uniqueness: 17, zone_quality: 12, search_complexity: 11, endgame_potential: 13, total: 67, status: 'active' },
+  'stevenson': { accessibility: 15, uniqueness: 18, zone_quality: 10, search_complexity: 9, endgame_potential: 12, total: 64, status: 'active' },
+  'albion': { accessibility: 13, uniqueness: 16, zone_quality: 12, search_complexity: 11, endgame_potential: 14, total: 66, status: 'active' },
+  'martin grove': { accessibility: 13, uniqueness: 16, zone_quality: 13, search_complexity: 12, endgame_potential: 15, total: 69, status: 'active' },
+  'westmore': { accessibility: 14, uniqueness: 17, zone_quality: 11, search_complexity: 10, endgame_potential: 13, total: 65, status: 'active' },
+  'humber college': { accessibility: 12, uniqueness: 15, zone_quality: 16, search_complexity: 15, endgame_potential: 16, total: 74, status: 'active' },
+}
+
+const SCORE_CRITERIA = [
+  ['accessibility', 'Accessibility'],
+  ['uniqueness', 'Uniqueness'],
+  ['zone_quality', 'Zone quality'],
+  ['search_complexity', 'Search complexity'],
+  ['endgame_potential', 'Endgame potential'],
+]
+
+function stationScore(station) {
+  if (!station) return null
+  const agencies = station.agencies.map((agency) => agency.toLocaleLowerCase())
+  if (!agencies.includes('ttc') && !agencies.includes('go')) return null
+  let key = station.name.toLocaleLowerCase()
+    .replace(/\s*[-–]\s*(?:(?:north|south|east|west)bound\s+)?platform\b.*$/i, '')
+    .replace(/\s+(?:(?:north|south|east|west)bound\s+)?platform\b.*$/i, '')
+    .replace(/\s+station\b/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  key = key.replace(/\s+go$/i, '').trim()
+  if (agencies.includes('go')) key += ' go'
+  return TORONTO_STATION_SCORES[key] ?? null
+}
+
 function CityPicker({ cities, onSelect }) {
   return (
     <main className="city-picker">
@@ -207,6 +366,7 @@ function App() {
   const [budget, setBudget] = useState('60')
   const [reachability, setReachability] = useState(null)
   const [search, setSearch] = useState('')
+  const [stationSort, setStationSort] = useState('score')
 
   useEffect(() => {
     let active = true
@@ -254,6 +414,27 @@ function App() {
       .filter(({ station }) => station.name.toLowerCase().includes(query))
       .slice(0, 6)
   }, [data, search, stations])
+  const stationRows = useMemo(() => {
+    if (!layers) return []
+    const rows = stations.map((station, index) => {
+      const routeIndices = [...new Set(station.stopIndices.flatMap((stopIndex) => [...layers.routesByStop[stopIndex]]))]
+      const lines = routeIndices.map((routeIndex) => layers.routes[routeIndex]?.name).filter(Boolean)
+      return { station, index, lines, lineLabel: lines.join(', '), score: activeCity?.id === 'toronto' ? stationScore(station) : null }
+    })
+    const sortKey = stationSort === 'score' && activeCity?.id !== 'toronto' ? 'name' : stationSort
+    rows.sort((a, b) => {
+      if (sortKey === 'line') return a.lineLabel.localeCompare(b.lineLabel) || a.station.name.localeCompare(b.station.name)
+      if (sortKey === 'name') return a.station.name.localeCompare(b.station.name)
+      const key = sortKey === 'score' ? 'total' : sortKey
+      const aValue = a.score?.[key]
+      const bValue = b.score?.[key]
+      if (aValue == null && bValue == null) return a.station.name.localeCompare(b.station.name)
+      if (aValue == null) return 1
+      if (bValue == null) return -1
+      return bValue - aValue || a.station.name.localeCompare(b.station.name)
+    })
+    return rows
+  }, [activeCity, layers, stationSort, stations])
 
   const openStation = (index) => {
     setSelectedStation(index)
@@ -358,6 +539,26 @@ function App() {
           <div className="hint-card"><span className="hint-dot" /><span>Select any station marker on the map to begin.</span></div>
         )}
 
+        <section className="station-directory" aria-label="Station directory">
+          <div className="directory-heading">
+            <div className="section-heading"><h2>Stations</h2><span>{stations.length}</span></div>
+            <label className="sort-control"><span>Sort</span><select value={stationSort} onChange={(event) => setStationSort(event.target.value)} aria-label="Sort stations">
+              {activeCity.id === 'toronto' && <>
+                <option value="score">Hiding score</option>
+                {SCORE_CRITERIA.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              </>}
+              <option value="line">Line</option>
+              <option value="name">Name</option>
+            </select></label>
+          </div>
+          <div className="station-list">
+            {stationRows.map(({ station, index, lineLabel, score }) => <button className="station-list-row" key={`${station.name}-${index}`} onClick={() => openStation(index)}>
+              <span className="station-list-copy"><span>{station.name}</span><small>{lineLabel || station.agencies.map((agency) => agency.toUpperCase()).join(' · ')}</small></span>
+              {score && <span className="station-list-score" aria-label={`Hiding score ${score.total} out of 100`}>{score.total}</span>}
+            </button>)}
+          </div>
+        </section>
+
         <div className="panel-divider" />
         <div className="section-heading"><h2>Network lines</h2><span>{layers.routes.length} routes</span></div>
         <div className="route-legend">
@@ -372,8 +573,17 @@ function App() {
         <div className="modal-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedStation(null) }}>
           <section className="query-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <button className="modal-close" aria-label="Close" onClick={() => setSelectedStation(null)}><X aria-hidden="true" size={17} /></button>
-            <p className="eyebrow modal-eyebrow">PLAN YOUR REACH</p>
+            {(() => {
+              const score = activeCity.id === 'toronto' ? stationScore(stations[selectedStation]) : null
+              return <>
+            <p className="eyebrow modal-eyebrow">{score ? 'STATION SCORE' : 'PLAN YOUR REACH'}</p>
             <h2 id="modal-title">{stations[selectedStation].name}</h2>
+            {score && <div className="station-score-block">
+              <div className="score-total"><div><span>GAME SCORE</span><small>out of 100</small></div><strong>{score.total}<span>/100</span></strong></div>
+              <div className="score-criteria">{SCORE_CRITERIA.map(([key, label]) => <div className="score-criterion" key={key}><div><span>{label}</span><strong>{score[key]}<small>/20</small></strong></div><div className="score-track"><span style={{ width: `${score[key] * 5}%` }} /></div></div>)}</div>
+              {score.status === 'replacement_bus_only' && <p className="score-status">Line 3 replacement bus station</p>}
+              <p className="score-explainer">Each category is scored from 0 to 20. Higher totals indicate a stronger station for the game.</p>
+            </div>}
             <p className="modal-subtitle">Choose when you leave and how long you have to move.</p>
             <form onSubmit={submitQuery}>
               <label className="field-label" htmlFor="start-time">Starting time</label>
@@ -382,7 +592,9 @@ function App() {
               <div className="number-field"><input id="travel-time" type="number" min="5" max="360" step="5" value={budget} onChange={(event) => setBudget(event.target.value)} required /><span>minutes</span></div>
               <button className="submit-button" type="submit">Show reachable stations</button>
             </form>
-            <p className="modal-footnote">Based on scheduled service. Service-day calendars are not applied yet.</p>
+            <p className="modal-footnote">Based on scheduled service. Service-day calendars are not applied yet.{activeCity.id === 'toronto' && !score ? ' No game score is available for this stop.' : ''}</p>
+              </>
+            })()}
           </section>
         </div>
       )}

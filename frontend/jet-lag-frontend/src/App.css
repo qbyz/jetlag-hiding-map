@@ -96,6 +96,19 @@
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
 .section-heading h2 { margin: 0; color: #f0f3f1; font-size: 12px; font-weight: 650; }
 .section-heading > span { color: #8d999c; font-size: 9px; }
+.station-directory { min-height: 0; margin-top: 13px; }
+.directory-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.directory-heading .section-heading { flex: 1; margin: 0; }
+.sort-control { display: flex; align-items: center; gap: 6px; color: #8d999c; font-size: 9px; }
+.sort-control select { max-width: 150px; height: 28px; padding: 0 7px; border: 1px solid #3a464b; border-radius: 6px; color: #dce5e0; background: #171f23; font: inherit; font-size: 9px; }
+.station-list { max-height: 25vh; overflow-y: auto; border: 1px solid #303b40; border-radius: 8px; scrollbar-width: thin; scrollbar-color: #3b484d transparent; }
+.station-list-row { width: 100%; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 9px; border: 0; border-bottom: 1px solid #283338; color: #e1e8e5; text-align: left; background: transparent; cursor: pointer; font: inherit; }
+.station-list-row:last-child { border-bottom: 0; }
+.station-list-row:hover,.station-list-row:focus-visible { outline: 0; background: #263238; }
+.station-list-copy { min-width: 0; display: grid; gap: 3px; }
+.station-list-copy > span { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.station-list-copy small { overflow: hidden; color: #879497; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.station-list-score { flex: none; min-width: 29px; padding: 4px 5px; border-radius: 5px; color: #b8f0ce; text-align: center; background: #48ad7224; font-size: 9px; font-weight: 700; }
 .route-legend { display: grid; gap: 1px; overflow: auto; scrollbar-width: thin; scrollbar-color: #3b484d transparent; }
 .legend-row { display: flex; align-items: center; gap: 9px; min-height: 27px; color: #c6d0d0; font-size: 10px; }
 .legend-swatch { flex: none; width: 16px; height: 4px; border-radius: 4px; box-shadow: 0 0 8px color-mix(in srgb, currentColor, transparent 55%); }
@@ -106,11 +119,26 @@
 .caption-key { width: 17px; height: 4px; border-radius: 3px; background: #838c91; }
 
 .modal-scrim { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 18px; background: #05090bb8; backdrop-filter: blur(4px); }
-.query-modal { position: relative; width: min(100%, 390px); box-sizing: border-box; padding: 27px; border: 1px solid #435054; border-radius: 15px; color: #edf1ee; background: #182126; box-shadow: 0 28px 90px #000a; }
+.query-modal { position: relative; width: min(100%, 390px); max-height: min(92svh, 850px); overflow-y: auto; box-sizing: border-box; padding: 27px; border: 1px solid #435054; border-radius: 15px; color: #edf1ee; background: #182126; box-shadow: 0 28px 90px #000a; }
 .modal-close { position: absolute; top: 14px; right: 15px; width: 30px; height: 30px; border: 1px solid #39464a; border-radius: 8px; color: #b8c3c2; background: #202a2e; font-size: 20px; cursor: pointer; }
 .modal-eyebrow { color: var(--brand-green); }
 .query-modal h2 { margin: 7px 35px 6px 0; color: #f4f6f2; font-size: 23px; line-height: 1.2; font-weight: 650; letter-spacing: -.4px; }
 .modal-subtitle { margin: 0 0 22px; color: #a4b1b1; font-size: 11px; }
+.station-score-block { margin: 15px 0 20px; padding: 14px; border: 1px solid #354349; border-radius: 10px; background: #121a1e; }
+.score-total { display: flex; align-items: center; justify-content: space-between; padding-bottom: 11px; border-bottom: 1px solid #303b40; }
+.score-total > div { display: grid; gap: 3px; }
+.score-total > div span { color: #c5d1cd; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+.score-total > div small { color: #849194; font-size: 9px; }
+.score-total > strong { color: var(--brand-green); font-size: 27px; font-weight: 700; letter-spacing: -.7px; }
+.score-total > strong span { margin-left: 2px; color: #849194; font-size: 11px; font-weight: 500; letter-spacing: 0; }
+.score-criteria { display: grid; gap: 9px; padding-top: 12px; }
+.score-criterion > div:first-child { display: flex; justify-content: space-between; margin-bottom: 5px; color: #bbc7c5; font-size: 10px; }
+.score-criterion strong { color: #eef2ef; font-weight: 600; }
+.score-criterion strong small { margin-left: 1px; color: #849194; font-size: 8px; font-weight: 400; }
+.score-track { height: 4px; overflow: hidden; border-radius: 4px; background: #303b40; }
+.score-track span { display: block; height: 100%; border-radius: inherit; background: var(--brand-ocean); }
+.score-explainer,.score-status { margin: 10px 0 0; color: #849194; font-size: 9px; line-height: 1.4; }
+.score-status { color: #e6bb76; }
 .query-modal form > input,.number-field { width: 100%; height: 44px; box-sizing: border-box; margin-bottom: 17px; padding: 0 12px; border: 1px solid #3d494d; border-radius: 8px; outline: none; color: #f1f4f0; background: #11191d; font: inherit; font-size: 13px; }
 .query-modal form > input:focus,.number-field:focus-within { border-color: var(--brand-green); box-shadow: 0 0 0 3px var(--brand-green)22; }
 .query-modal input[type='time']::-webkit-calendar-picker-indicator { filter: invert(.8); }
@@ -137,7 +165,7 @@
   .city-card { min-height: 180px; padding: 15px; }
   .city-picker-note { text-align: center; }
   .app-shell,.app-state { min-height: 100svh; }
-  .network-panel { left: 50%; top: calc(env(safe-area-inset-top) + 12px); bottom: auto; width: min(410px, calc(100% - 24px)); max-height: min(52svh, 440px); padding: 13px 14px 10px; border-radius: 12px; transform: translateX(-50%); }
+  .network-panel { left: 50%; top: calc(env(safe-area-inset-top) + 12px); bottom: auto; width: min(410px, calc(100% - 24px)); max-height: min(58svh, 500px); overflow-y: auto; padding: 13px 14px 10px; border-radius: 12px; transform: translateX(-50%); }
   .sidebar-topline { padding-bottom: 9px; }
   .sidebar-topline span { font-size: 10px; }
   .sidebar-topline button { min-height: 30px; padding: 6px 10px; }
@@ -146,6 +174,10 @@
   .search-wrap input { font-size: 13px; }
   .hint-card,.result-card { min-height: 43px; margin-top: 9px; }
   .panel-divider { margin: 11px 0 9px; }
+  .station-directory { margin-top: 10px; }
+  .station-list { max-height: 16svh; }
+  .station-list-row { min-height: 37px; }
+  .sort-control select { max-width: 145px; }
   .route-legend { grid-template-columns: 1fr 1fr; max-height: 72px; }
   .legend-row { min-height: 25px; gap: 6px; font-size: 9px; }
   .legend-swatch { width: 12px; }
