@@ -339,7 +339,7 @@ function App() {
       </MapContainer>
 
       <aside className="network-panel">
-        <div className="sidebar-topline"><span><i />{activeCity.name} network</span><button onClick={() => { setActiveCity(null); setReachability(null); setSearch('') }}>All cities</button></div>
+        <div className="sidebar-topline"><span><i />{activeCity.name}</span><button onClick={() => { setActiveCity(null); setReachability(null); setSearch('') }}>All cities</button></div>
 
         <label className="search-label" htmlFor="station-search">Find a station</label>
         <div className="search-wrap">
