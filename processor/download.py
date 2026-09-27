@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
+import ssl
 from pathlib import Path
 import shutil
 import tempfile
+from urllib.parse import urlparse
 import zipfile
 
 import requests
+from requests.adapters import HTTPAdapter
 
 try:
     from .city_config import get_city
@@ -19,6 +22,19 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 PROJECT_DIR = BASE_DIR.parent
+
+
+class LegacyTLSAdapter(HTTPAdapter):
+    """Keep certificate checks while permitting an explicitly configured TLS level."""
+
+    def __init__(self, security_level: int):
+        self.ssl_context = ssl.create_default_context()
+        self.ssl_context.set_ciphers(f"DEFAULT@SECLEVEL={security_level}")
+        super().__init__()
+
+    def init_poolmanager(self, connections, maxsize, block=False, **kwargs):
+        kwargs["ssl_context"] = self.ssl_context
+        return super().init_poolmanager(connections, maxsize, block=block, **kwargs)
 
 
 def _latest_feed_url(session: requests.Session, metadata_url: str, dataset_id: str) -> str:
@@ -75,6 +91,12 @@ def download_feed(city_id: str, feed_id: str, feed: dict, *, session: requests.S
         url = feed.get("url")
     if not url:
         raise ValueError(f"Feed {feed_id!r} for {city_id!r} needs url or metadata_url/dataset_id")
+    if feed.get("tls_security_level") is not None:
+        level = int(feed["tls_security_level"])
+        if not 1 <= level <= 5:
+            raise ValueError("tls_security_level must be between 1 and 5")
+        parsed_url = urlparse(url)
+        session.mount(f"{parsed_url.scheme}://{parsed_url.netloc}/", LegacyTLSAdapter(level))
     request_params = {}
     for key, value in feed.get("url_params", {}).items():
         if isinstance(value, dict) and "env" in value:
@@ -100,7 +122,8 @@ def download_feed(city_id: str, feed_id: str, feed: dict, *, session: requests.S
     except requests.RequestException as exc:
         response = getattr(exc, "response", None)
         status = f" (HTTP {response.status_code})" if response is not None else ""
-        raise RuntimeError(f"Could not download the {feed_id.upper()} feed for {city_id}{status}; check network access and feed authorization.") from None
+        kind = type(exc).__name__
+        raise RuntimeError(f"Could not download the {feed_id.upper()} feed for {city_id}{status} [{kind}]; check network access and feed authorization.") from None
     temp_path.replace(destination)
 
     # Validate before replacing the current extracted feed.

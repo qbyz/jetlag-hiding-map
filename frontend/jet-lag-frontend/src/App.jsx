@@ -344,7 +344,7 @@ function App() {
         <label className="search-label" htmlFor="station-search">Find a station</label>
         <div className="search-wrap">
           <Search className="search-icon" aria-hidden="true" size={18} />
-          <input id="station-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search the rail network" />
+          <input id="station-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search the network" />
         </div>
         {matchingStops.length > 0 && <div className="search-results">{matchingStops.map(({ station, index }) => <button key={`${station.name}-${index}`} onClick={() => { openStation(index); setSearch('') }}><span>{station.name}</span><small>{station.agencies.map((agency) => agency.toUpperCase()).join(' · ')}</small></button>)}</div>}
 

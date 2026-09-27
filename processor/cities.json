@@ -64,7 +64,7 @@
     "feeds": {
       "bc_transit": {
         "directory": "data/salt-spring-island/bc_transit",
-        "url": "https://files.mobilitydatabase.org/mdb-2466/mdb-2466-202609250127/mdb-2466-202609250127.zip"
+        "url": "https://bct.tmix.se/Tmix.Cap.TdExport.WebApi/gtfs/?operatorIds=39"
       }
     },
     "route_rules": [
@@ -79,11 +79,27 @@
     "feeds": {
       "cta": {
         "directory": "data/chicago/cta",
-        "url": "https://files.mobilitydatabase.org/mdb-389/mdb-389-202609160157/mdb-389-202609160157.zip"
+        "url": "https://www.transitchicago.com/downloads/sch_data/google_transit.zip"
       }
     },
     "route_rules": [
       { "feed": "cta", "route_types": ["1"], "mode": "subway" }
+    ]
+  },
+  "waterloo": {
+    "name": "Waterloo Region",
+    "region": "Ontario, Canada",
+    "timeZone": "America/Toronto",
+    "operators": "Grand River Transit",
+    "feeds": {
+      "grt": {
+        "directory": "data/waterloo/grt",
+        "url": "https://webapps.regionofwaterloo.ca/api/grt-routes/api/staticfeeds/1",
+        "tls_security_level": 1
+      }
+    },
+    "route_rules": [
+      { "feed": "grt", "route_types": ["3"], "mode": "bus" }
     ]
   }
 }
