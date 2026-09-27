@@ -28,7 +28,6 @@ function CityPicker({ onSelect }) {
         <div className="city-grid" aria-label="Available cities">
           {CITIES.map((city) => (
             <button className="city-card" key={city.id} onClick={() => onSelect(city)}>
-              <span className="city-card-top"><span className="available-pill"><i />AVAILABLE</span></span>
               <span className="city-card-name">{city.name}</span>
               <span className="city-card-region">{city.region}</span>
               <span className="city-card-bottom"><span>{city.operators}</span><span>{city.lines} lines</span></span>
