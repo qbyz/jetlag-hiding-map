@@ -54,6 +54,7 @@ def frontend_cities(cities: dict, graph_dir: Path | None = None) -> list[dict]:
             "name": config["name"],
             "region": config.get("region", ""),
             "operators": config.get("operators", ", ".join(config["feeds"])),
+            "networkType": config.get("networkType", "bus" if config.get("route_rules") and all(rule.get("mode") == "bus" for rule in config["route_rules"]) else "rail"),
             "timeZone": config.get("timeZone", "UTC"),
             "graphPath": f"/cities/{city_id}.msgpack",
             "lines": line_count,

@@ -4,6 +4,7 @@
     "name": "Toronto",
     "region": "Ontario, Canada",
     "operators": "TTC + GO",
+    "networkType": "rail",
     "timeZone": "America/Toronto",
     "graphPath": "/cities/toronto.msgpack",
     "lines": 12
@@ -13,6 +14,7 @@
     "name": "New York City",
     "region": "New York, NY",
     "operators": "MTA Subway",
+    "networkType": "rail",
     "timeZone": "America/New_York",
     "graphPath": "/cities/nyc.msgpack",
     "lines": 28
@@ -22,6 +24,7 @@
     "name": "Salt Spring Island",
     "region": "British Columbia, Canada",
     "operators": "BC Transit",
+    "networkType": "bus",
     "timeZone": "America/Vancouver",
     "graphPath": "/cities/salt-spring-island.msgpack",
     "lines": 8
@@ -31,6 +34,7 @@
     "name": "Chicago",
     "region": "Illinois, United States",
     "operators": "CTA",
+    "networkType": "rail",
     "timeZone": "America/Chicago",
     "graphPath": "/cities/chicago.msgpack",
     "lines": 8
@@ -40,6 +44,7 @@
     "name": "Waterloo Region",
     "region": "Ontario, Canada",
     "operators": "Grand River Transit",
+    "networkType": "bus",
     "timeZone": "America/Toronto",
     "graphPath": "/cities/waterloo.msgpack",
     "lines": 52

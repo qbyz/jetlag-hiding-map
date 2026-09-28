@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { decode } from '@msgpack/msgpack'
-import { LockKeyhole, Route, Search, X } from 'lucide-react'
+import { BusFront, LockKeyhole, Route, Search, TrainFront, X } from 'lucide-react'
 import { CircleMarker, MapContainer, Pane, Polyline, TileLayer, Tooltip, ZoomControl } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
@@ -168,7 +168,10 @@ function stationScore(station) {
     .trim()
   key = key.replace(/\s+go$/i, '').trim()
   if (agencies.includes('go')) key += ' go'
-  return TORONTO_STATION_SCORES[key] ?? null
+  const score = TORONTO_STATION_SCORES[key]
+  if (!score) return null
+  const uniqueness = 20 - score.uniqueness
+  return { ...score, uniqueness, total: score.total - score.uniqueness + uniqueness }
 }
 
 function CityPicker({ cities, onSelect }) {
@@ -184,6 +187,9 @@ function CityPicker({ cities, onSelect }) {
         <div className="city-grid" aria-label="Available cities">
           {cities.map((city) => (
             <button className="city-card" key={city.id} onClick={() => onSelect(city)}>
+              <span className="city-card-mode" aria-label={city.networkType === 'bus' ? 'Bus network' : 'Rail network'}>
+                {city.networkType === 'bus' ? <BusFront aria-hidden="true" size={20} /> : <TrainFront aria-hidden="true" size={20} />}
+              </span>
               <span className="city-card-name">{city.name}</span>
               <span className="city-card-region">{city.region}</span>
               <span className="city-card-bottom"><span>{city.operators}</span><span>{city.lines} lines</span></span>

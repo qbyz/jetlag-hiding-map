@@ -21,6 +21,7 @@
 .city-card { min-height: 210px; display: flex; flex-direction: column; padding: 17px; border: 1px solid #3b484a; border-radius: 12px; color: #eef2ed; text-align: left; background: linear-gradient(145deg, #1c2629f5, #172023f2); box-shadow: 0 18px 55px #0003; cursor: pointer; transition: border-color .18s, transform .18s, background .18s; }
 .city-card:hover { transform: translateY(-3px); border-color: var(--brand-ocean); background: linear-gradient(145deg, #232e30, #192326); }
 .city-card-top { display: flex; justify-content: flex-end; align-items: center; }
+.city-card-mode { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid #39524a; border-radius: 9px; color: var(--brand-green); background: #48ad7218; }
 .sidebar-topline i { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: var(--brand-green); box-shadow: 0 0 9px var(--brand-green)77; }
 .city-card-name { margin-top: 20px; font-size: 23px; font-weight: 650; letter-spacing: -.5px; }
 .city-card-region { margin-top: 2px; color: #97a5a4; font-size: 11px; }
